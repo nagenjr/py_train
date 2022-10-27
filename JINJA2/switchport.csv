@@ -1,0 +1,4 @@
+interface,vlan,server,link,purpose
+Etherner1/1,42,Test-Server1,Nic1,Development
+Etherner2/1,trunk,Test-Server2,Nic2,Development
+Etherner3/1,599,Server3,Nic0,PROD

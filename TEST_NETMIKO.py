@@ -1,6 +1,5 @@
 from netmiko import ConnectHandler
 from getpass import getpass
-from netmiko.ssh_exception import AuthenticationException
 from netmiko.ssh_exception import NetmikoTimeoutException
 from paramiko.ssh_exception import SSHException
 

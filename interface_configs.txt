@@ -1,0 +1,22 @@
+#
+interface Etherner1/1
+  description Link to Test-Server1 port Nic1 for Development
+  switchport
+  switchport mode access
+  switchport access vlan 42
+  spanning-tree port type edge
+  no shutdown
+#
+interface Etherner2/1
+  description Link to Test-Server2 port Nic2 for Development
+  switchport
+  switchport mode trunk
+  no shutdown
+#
+interface Etherner3/1
+  description Link to Server3 port Nic0 for PROD
+  switchport
+  switchport mode access
+  switchport access vlan 599
+  spanning-tree port type edge
+  no shutdown
