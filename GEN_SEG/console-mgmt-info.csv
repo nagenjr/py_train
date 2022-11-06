@@ -1,0 +1,3 @@
+Device,Platform,VIP,Mgmt1,Mgmt2,Gateway,New VIP,New_Mgmt1,New_Mgmt2,New_Gateway
+csw1.sy1,Arista DCS-7508,10.6.7.220,10.6.7.221,10.6.7.222,10.6.7.1/25,10.10.3.132,10.10.3.133,10.10.3.134,10.10.3.128/24
+lsw1.sy1,Arista DCS-7280SR,-,10.6.7.223,,10.6.7.1/25,,10.10.3.160,,10.10.3.128/24

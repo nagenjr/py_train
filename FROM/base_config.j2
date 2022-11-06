@@ -1,0 +1,433 @@
+{#
+
+##  Configuration diff between different hardware
+#
+#+-------+--------+
+#| VXLAN | MC-LAG |
+#+-------+--------+
+#|       |        |
+#+-------+--------+
+#
+#
+#+----------------+-----------------------------------+-----------------------------------+
+#|                |                GEN2               |                GEN3               |
+#+----------------+-----------------------------------+-----------------------------------+
+#|   1RU or 2RU   | Management 1                      | Management in VRF                 |
+#|                |                                   | Management 1                      |
+#+----------------+-----------------------------------+-----------------------------------+
+#| MODULAR Switch | Management 0                      | Management in VRF                 |
+#|                | Redundancy protocol sso           | Management 0                      |
+#|                | platform arad lag mode 256x64     | Redundancy protocol rpr           |
+#|                | hardware storm-control rate limit |                                   |
+#+----------------+-----------------------------------+-----------------------------------+
+
+
+#Example configuration diff between SFLOW SVI and None SFlow SVI
+#
+#+----------------+--------------------------------------------------------------+
+#| No SFlow SVI   |                           SFlow SVI                          |
+#+----------------+--------------------------------------------------------------+
+#|                | vlan 30                                                      |
+#|                |   name SFLOW1                                                |
+#|                |   trunk group 30                                             |
+#|                | interface vlan 30                                            |
+#|                |   ip address 10.234.19.1/29                                  |
+#|                | interface Ethernet26                                         |
+#|                |   description lsw1.sv1, Eth 26, A, nse1.sv1.em4, IT, cableid |
+#|                |   load-interval 5                                            |
+#|                |   switchport access vlan 30                                  |
+#|                | router ospf 1                                                |
+#|                |   passive-interface Vlan30                                   |
+#+----------------+--------------------------------------------------------------+
+
+==== MANAGEMENT  =====
+
+Input Parameters:
+Parameter	              Description	                      Format \ Options
+HOSTNAME
+IP_MGMT_IP
+IP_DEFAULT_GATEWAY
+ENABLE_PASSWORD
+
+
+===== MANAGEMENT  =========
+MANAGEMENT:
+  HOSTNAME:
+  IP_MGMT_IP:
+  IP_DEFAULT_GATEWAY:
+  ENABLE_PASSWORD:
+
+==== LOGGING  =====
+Input Parameters:
+Parameter	            Description	                            Format \ Options
+IP_LOGGING	          List of Remote syslog server #1	        IP Address (X.X.X.X)
+
+LOGGING:
+  - IP:
+
+
+
+==== NTP  =====
+Input Parameters:
+Parameter	    Description	                          Format \ Options
+IP_NTP_PRI	  Remote NTP server #1	                IP Address (X.X.X.X)
+IP_NTP_SEC	  Remote NTP server #2	                IP Address (X.X.X.X)
+
+NTP:
+  - IP_NTP_PRI:
+  - IP_NTP_SEC:
+
+#### SFLOW ######
+Parameter	            Description	                            Format \ Options
+COLLCTORS.IP	        List of SFLOW Collctors IP	        IP Address (X.X.X.X)
+VLAN:                   For 7500 and 7050SX only            VLAN number (70)
+
+SFLOW:
+  COLLCTORS:
+    - IP:
+  VLAN:   ### For'7500' and '7050SX' only
+
+
+==== SNMP  =====
+Input Parameters:
+Parameter	            Description	                            Format \ Options
+SNMP_LOCATION	        SNMP Location	                    IBX:CAGE:CAB:RU
+SNMP_TRAP_IP.IP	        List of SNMP Trap server #1	        IP Address (X.X.X.X)
+
+SNMP:
+  SNMP_LOCATION:
+  SNMP_TRAP_IP:
+    - IP:
+
+======= TACACS+ ============
+
+Input Parameters:
+Parameter	            Description	                  Format \ Options
+TACACS_SERVER	   TACACS+ Server                  IP	IP Address    (X.X.X.X)
+TACACS_KEY	       Private TACACS Key	             password
+
+
+TACACS:
+  - TACACS_SERVER:
+    TACACS_KEY:
+
+
+======= STP  (For For 7500 and 7050SX only) ============
+
+Input Parameters:
+Parameter	            Description	                  Format \ Options
+ROOT        	       Root switch for STP            TRUE/FALSE
+INSTANCES.NUM	       MSTP Instance number	          Number (1)
+INSTANCES.VLAN_LIST    List of VLANs                  1,2,3,4
+
+
+STP:
+  ROOT: TRUE
+  INSTANCES:
+  - NUM:
+    VLAN_LIST:
+
+
+
+======= VLAN ============
+
+Input Parameters:
+Parameter	            Description	                  Format \ Options
+VLAN        	       VLAN Number                    99
+VLAN_NAME	           Name of VLAN 	              public_vlan
+TRUNK_GROUP
+
+VLANS:
+  - VLAN:
+    VLAN_NAME:
+    TRUNK_GROUP:
+
+
+Procedure:
+
+#}
+
+
+{%- if HARDWARE.TYPE == 'GEN3' %}
+{%- set MANAGEMENT_VRF = 'vrf MANAGEMENT' %}
+{%- set MANAGEMENT_ACL = 'ip access-group mng vrf MANAGEMENT in' %}
+{%- else %}
+{%- set MANAGEMENT_VRF = '' %}
+{%- set MANAGEMENT_ACL = '' %}
+{%- endif %}
+
+
+
+{%- if HARDWARE.MODULAR_SWITCH == false %}
+{%- set MANAGEMENT_INT = 'Management1' %}
+{%- else %}
+{%- set MANAGEMENT_INT = 'Management0' %}
+{%- endif %}
+
+{%- if HARDWARE.TYPE == 'GEN3' %}
+vrf definition MANAGEMENT
+   rd 0:0
+{%- endif %}
+
+interface {{MANAGEMENT_INT}}
+{%- if HARDWARE.TYPE == 'GEN3' %}
+   vrf forwarding MANAGEMENT
+{%- endif %}
+   ip address {{MANAGEMENT.IP_MGMT_IP}}/{{MANAGEMENT.MASK}}
+
+management api http-commands
+   no shutdown
+   no protocol http
+{%- if HARDWARE.TYPE == 'GEN3' %}
+   {{MANAGEMENT_VRF}}
+      no shutdown
+      ip access-group mng
+{%- endif %}
+
+management console
+   idle-timeout 480
+management ssh
+   idle-timeout 480
+   {{MANAGEMENT_ACL}}
+management telnet
+   shutdown
+   idle-timeout 480
+   {{MANAGEMENT_ACL}}
+
+    {%- if LOGGING %}
+service sequence-numbers
+logging buffered 12000
+logging trap debugging
+logging console debugging
+        {%- for IP_LOGGING in LOGGING %}
+logging {{MANAGEMENT_VRF}} host {{IP_LOGGING.IP}}
+        {%- endfor %}
+logging format hostname fqdn
+logging facility local6
+logging {{MANAGEMENT_VRF}} source-interface {{MANAGEMENT_INT}}
+    {% endif %}
+
+hostname {{MANAGEMENT.HOSTNAME}}
+
+ntp source {{MANAGEMENT_VRF}} {{MANAGEMENT_INT}}
+ntp server {{MANAGEMENT_VRF}} {{NTP.IP_NTP_PRI}} prefer
+ntp server {{MANAGEMENT_VRF}} {{NTP.IP_NTP_SEC}}
+
+    {%- if HARDWARE.MODULAR_SWITCH == true %}
+        {%- if HARDWARE.TYPE == 'GEN3' %}
+redundancy
+   protocol  rpr
+        {%- else %}
+redundancy
+   protocol sso
+        {% endif %}
+    {%- endif %}
+
+    {%- if SFLOW %}
+sflow sample 65536
+        {%- for COLLECTOR in SFLOW.COLLCTORS %}
+sflow destination {{COLLECTOR.IP}}
+        {%- endfor %}
+sflow source-interface Loopback0
+sflow run
+    {% endif %}
+
+    {%- if SNMP %}
+snmp-server location {{SNMP.SNMP_LOCATION}}
+snmp-server community Public ro
+snmp-server community wr1tec0m rw
+snmp-server {{MANAGEMENT_VRF}} source-interface {{MANAGEMENT_INT}}
+        {%- for TRAP_IP in SNMP.SNMP_TRAP_IP%}
+snmp-server host {{TRAP_IP.IP}} {{MANAGEMENT_VRF}} version 2c Public
+        {%- endfor %}
+        {%- if HARDWARE.TYPE == 'GEN3' %}
+snmp-server {{MANAGEMENT_VRF}}
+        {%- endif %}
+snmp-server source-interface Loopback0
+    {% endif %}
+
+username maint privilege 15 secret 0 {{MANAGEMENT.ENABLE_PASSWORD}} role network-admin
+
+clock timezone UTC
+
+    {%- if TACACS %}
+        {%- for SEVER in TACACS %}
+tacacs-server host {{SEVER.TACACS_SERVER}} {{MANAGEMENT_VRF}} key {{SEVER.TACACS_KEY}}
+        {%- endfor%}
+aaa authentication login default group tacacs+ local
+aaa authentication enable default group tacacs+ local
+aaa authentication policy on-success log
+aaa authentication policy on-failure log
+aaa authorization exec default group tacacs+ local
+aaa authorization commands all default group tacacs+ local
+aaa accounting exec console start-stop group tacacs+
+aaa accounting commands all console start-stop group tacacs+
+aaa accounting commands all default start-stop group tacacs+
+enable secret 0 {{MANAGEMENT.ENABLE_PASSWORD}}
+aaa root secret 0 {{MANAGEMENT.ENABLE_PASSWORD}}
+    {% endif %}
+
+mac address-table aging-time 14400
+ip route {{MANAGEMENT_VRF}} 0.0.0.0/0 {{MANAGEMENT.IP_DEFAULT_GATEWAY}}
+ip route {{ROUTING.L3_IP_RANGE}} Null0
+ip routing
+    {%- if HARDWARE.TYPE == 'GEN3' %}
+no ip routing {{MANAGEMENT_VRF}}
+    {%- else %}
+ip route 10.0.0.0/8 {{MANAGEMENT.IP_DEFAULT_GATEWAY}}
+ip route 172.16.0.0/12 {{MANAGEMENT.IP_DEFAULT_GATEWAY}}
+ip route 192.168.0.0/16 {{MANAGEMENT.IP_DEFAULT_GATEWAY}}
+    {%- endif %}
+no ip igmp snooping
+
+        {%- if HARDWARE.TYPE == 'GEN3' %}
+ip access-list mng
+   10 permit icmp any any
+   20 permit ip any any tracked
+   30 permit tcp any any eq ftp ftp-data ftps ftps-data ldap snmp snmptrap ssh tacacs www
+   40 permit udp any any eq bootps bootpc domain ftps ftps-data ldap nfs ntp snmp snmptrap
+   50 permit udp any any eq syslog tacacs tftp
+
+ip access-list sflow
+   10 permit icmp any any
+   20 permit udp {{ROUTING.L3_IP_RANGE}} {{ROUTING.L3_IP_RANGE}} eq snmp snmptrap
+        {%- else %}
+ip access-list EQIX-CONTROL-ACL
+   statistics per-entry
+   10 permit icmp any any
+   20 permit ip any any tracked
+   30 permit udp any any eq bfd ttl eq 255
+   40 permit udp any any eq bfd-echo ttl eq 254
+   50 permit ospf any any
+   60 permit tcp any any eq ssh telnet www snmp bgp https msdp
+   70 permit udp any any eq bootps bootpc snmp rip ntp
+   80 permit tcp any any eq mlag ttl eq 255
+   90 permit udp any any eq mlag ttl eq 255
+   100 permit vrrp any any
+   110 permit ahp any any
+   120 permit pim any any
+   130 permit igmp any any
+   140 permit tcp any any range 5900 5910
+   150 permit tcp any any range 50000 50100
+   160 permit udp any any range 51000 51100
+
+control-plane
+   ip access-group EQIX-CONTROL-ACL in
+        {%- endif %}
+
+spanning-tree mode none
+
+    {%- if VLANS %}
+vlan internal allocation policy ascending range 3800 3999
+        {%- for VLAN in VLANS%}
+vlan {{VLAN.VLAN}}
+  name {{VLAN.VLAN_NAME}}
+  trunk group {{VLAN.VLAN}}
+            {%- for group in VLAN.TRUNK_GROUP %}
+                {%- if group.GROUP != VLAN.VLAN %}
+  trunk group {{group.GROUP}}
+                {%- endif %}
+            {%- endfor %}
+        {%- endfor %}
+    {%- endif %}
+
+vlan 1
+   state suspend
+
+    {%- if SFLOW %}
+        {%- if SFLOW.VLAN and SFLOW.SVI_IP %}
+vlan {{SFLOW.VLAN}}
+   name SFLOW1
+   trunk group {{SFLOW.VLAN}}
+interface vlan {{SFLOW.VLAN}}
+   ip address {{SFLOW.SVI_IP}}
+   ip access-group sflow in
+            {%- if SFLOW.INTERFACE %}
+                {%- for INTERFACE in SFLOW.INTERFACE %}
+interface Ethernet{{INTERFACE.INT}}
+   description {{MANAGEMENT.HOSTNAME}}, Eth {{INTERFACE.INT}}, A, {{INTERFACE.TO}}, IT, cableid
+   load-interval 5
+   switchport access vlan {{SFLOW.VLAN}}
+                {%- endfor %}
+            {%- endif %}
+        {%- endif %}
+    {% endif %}
+
+service unsupported-transceiver equinix d2ec432a
+
+mac address-table notification host-flap logging
+
+
+interface Loopback0
+   ip address {{ROUTING.LOOPBACK_IP}}/32
+
+
+interface Vxlan1
+   vxlan source-interface Loopback0
+   vxlan udp-port 4789
+
+        {%- for VNI in VLANS %}
+   vxlan vlan {{VNI.VLAN}} vni {{VNI.VLAN}}
+        {%- endfor %}
+        {%- set glob = {'VTEP': ''} %}
+        {%- for VTEP in VTEPS %}
+                 {%- set _ = glob.update({'VTEP': glob['VTEP'] + ' ' + VTEP.IP }) %}
+        {%- endfor %}
+        {%- for VNI in VLANS %}
+   vxlan vlan {{VNI.VLAN}} flood vtep {{glob['VTEP']}}
+        {%- endfor %}
+
+
+{%- if not ROUTING.ISIS_NET %}
+router ospf 1
+   router-id {{ROUTING.LOOPBACK_IP}}
+   bfd all-interfaces
+   {%- if SFLOW.VLAN %}
+   passive-interface Vlan{{SFLOW.VLAN}}
+   {%- endif %}
+   network {{ROUTING.L3_IP_RANGE}} area 0.0.0.0
+   max-lsa 12000
+   log-adjacency-changes detail
+   timers throttle spf 10 100 1000
+   timers lsa arrival 50
+   timers throttle lsa all 10 100 1000
+   timers out-delay 800
+   max-metric router-lsa on-startup 200
+{%- else %}
+router isis 1
+   net {{ROUTING.ISIS_NET}}
+   is-type level-{{ISIS.LEVEL}}
+   {%- if SFLOW.VLAN %}
+   passive-interface Vlan{{SFLOW.VLAN}}
+   {%- endif %}
+   max-lsp-lifetime 65535
+   set-overload-bit on-startup 200
+   spf-interval 5 50 200
+   timers lsp generation 5 50 200
+   authentication mode md5 level-{{ISIS.LEVEL}}
+   graceful-restart
+   graceful-restart restart-hold-time 120
+   authentication key 0 {{ISIS.MD5_KEY}} level-{{ISIS.LEVEL}}
+   !
+   address-family ipv4 unicast
+{%- endif %}
+
+    {% for INTERFACE in L3INTERFACE %}
+interface Ethernet {{INTERFACE.INTERFACE}}
+   description {{MANAGEMENT.HOSTNAME}}, Eth {{INTERFACE.INTERFACE}}, A, trunk to {{INTERFACE.TO}}
+   load-interval 5
+   mtu 9214
+   no switchport
+   ip address {{INTERFACE.IP}}/31
+
+   {%- if not ROUTING.ISIS_NET %}
+   ip ospf cost {{INTERFACE.METRIC}}
+   ip ospf network point-to-point
+   {%- else %}
+   isis metric {{INTERFACE.METRIC}}
+   isis network point-to-point
+   isis authentication mode md5 level-{{ISIS.LEVEL}}
+   isis authentication key 0 {{ISIS.MD5_KEY}} level-{{ISIS.LEVEL}}
+   {%- endif %}
+   no sflow enable
+   {% endfor %}

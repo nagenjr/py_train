@@ -1,0 +1,148 @@
+### You can seperate this yml file into two, one is site related, the other is comomn.yml
+### Please refer to Metro/SV/lsw1.yml and  Metro/SV/common.yml as a refer.
+
+
+##  Configuration diff between different hardware
+#
+#+-------+--------+
+#| VXLAN | MC-LAG |
+#+-------+--------+
+#|       |        |
+#+-------+--------+
+#
+#
+#+----------------+-----------------------------------+-----------------------------------+
+#|                |                GEN2               |                GEN3               |
+#+----------------+-----------------------------------+-----------------------------------+
+#|   1RU or 2RU   | Management 1                      | Management in VRF                 |
+#|                |                                   | Management 1                      |
+#+----------------+-----------------------------------+-----------------------------------+
+#| MODULAR Switch | Management 0                      | Management in VRF                 |
+#|                | Redundancy protocol sso           | Management 0                      |
+#|                | platform arad lag mode 256x64     | Redundancy protocol rpr           |
+#|                | hardware storm-control rate limit |                                   |
+#+----------------+-----------------------------------+-----------------------------------+
+
+
+#Example configuration diff between SFLOW SVI and None SFlow SVI
+#
+#+----------------+--------------------------------------------------------------+
+#| No SFlow SVI   |                           SFlow SVI                          |
+#+----------------+--------------------------------------------------------------+
+#|                | vlan 30                                                      |
+#|                |   name SFLOW1                                                |
+#|                |   trunk group 30                                             |
+#|                | interface vlan 30                                            |
+#|                |   ip address 10.234.19.1/29                                  |
+#|                | interface Ethernet26                                         |
+#|                |   description lsw1.sv1, Eth 26, A, nse1.sv1.em4, IT, cableid |
+#|                |   load-interval 5                                            |
+#|                |   switchport access vlan 30                                  |
+#|                | router ospf 1                                                |
+#|                |   passive-interface Vlan30                                   |
+#+----------------+--------------------------------------------------------------+
+
+
+
+MANAGEMENT:
+   HOSTNAME: "lsw1.sv1"
+   IP_MGMT_IP: "172.22.38.51"
+   IP_DEFAULT_GATEWAY: 172.22.38.1
+   MASK: 24
+
+HARDWARE:
+  VXLAN: true
+  TYPE: GEN2
+  MODULAR_SWITCH: true
+
+NTP:
+  IP_NTP_PRI: 172.22.64.177
+  IP_NTP_SEC: 172.22.244.245
+
+
+LOGGING:
+  - IP: 10.194.5.17
+  - IP: 10.202.5.17
+
+
+SFLOW:
+  COLLCTORS:
+    - IP: 10.234.19.2
+    - IP: 10.234.19.10
+  ### Optional parameter, only need if it needs L3 SVI for Sflow
+  VLAN:   30
+  SVI_IP: 10.234.19.1/29
+  INTERFACE:
+    - INT: 26
+      TO: nse1.sv1.em4
+
+SNMP:
+  SNMP_LOCATION: SV1:01:1185:106
+  SNMP_TRAP_IP:
+    - IP: 10.194.5.17
+    - IP: 10.202.5.17
+
+
+TACACS:
+  - TACACS_SERVER: 172.22.64.59
+    TACACS_KEY: n00nt1me
+  - TACACS_SERVER: 172.22.82.80
+    TACACS_KEY: n00nt1me
+
+ROUTING:
+  L3_IP_RANGE: 10.234.16.0/22
+  LOOPBACK_IP: 10.234.16.1
+  ####  ONLY REQUIRED WHEN IT IS UPF NODES AND RUNNING ISIS
+  ### IF IT IS DEFINE, IT WILL RUN ISIS INSTEAD OF OSPF!!
+#  ISIS_NET: 49.0001.0102.3401.6001.00
+
+
+VTEPS:
+    - IP: 10.234.16.1
+    - IP: 10.234.16.2
+    - IP: 10.234.16.3
+    - IP: 10.234.16.4
+    - IP: 10.234.16.5
+    - IP: 10.234.16.6
+    - IP: 10.234.16.7
+    - IP: 10.234.16.8
+    - IP: 10.234.16.9
+
+VLANS:
+  - VLAN: 3
+    VLAN_NAME: test
+    TRUNK_GROUP:
+      - GROUP: TRUNK
+
+  - VLAN: 42
+    VLAN_NAME: QRTN
+
+  - VLAN: 99
+    VLAN_NAME: IX
+    TRUNK_GROUP:
+      - GROUP: TRUNK
+
+  - VLAN: 103
+    VLAN_NAME: 103-Levedl3-IIJ
+    TRUNK_GROUP:
+      - GROUP: TRUNK
+
+  - VLAN: 313
+    VLAN_NAME:  313-XO-ESNet
+    TRUNK_GROUP:
+      - GROUP: TRUNK
+
+L3INTERFACE:
+  - INTERFACE: 3/49/1
+    IP: 10.234.18.254
+    METRIC: 10
+    TO: csw1.sv1 et4/31 PP:106:210201:63-64, IT, 18218885
+  - INTERFACE: 3/49/5
+    IP: 10.234.18.252
+    METRIC: 40
+    TO: csw2.sv1 et4/31 PP:106:210201:65-66, IT, 18218889
+
+####  ONLY REQUIRED WHEN IT IS UPF NODES AND RUNNING ISIS
+#ISIS:
+#  MD5_KEY: "UPF_ISIS_KEY"
+#  LEVEL: 2

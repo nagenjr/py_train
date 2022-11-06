@@ -1,0 +1,103 @@
+=============================================================
+   {{ Device }} - {{ Platform }}
+-------------------------------------------------------------
+#
+{% if Product == 'IX' -%}
+    {% if VIP != '' -%}
+interface Management0
+  no ip address {{ VIP }}/24
+  ip address {{ New_VIP }}/25
+#
+interface Management1/1
+  no ip address {{ Mgmt1 }}/24
+  ip address {{ New_Mgmt1 }}/25
+#
+interface Management2/1
+  no ip address {{ Mgmt2 }}/24
+  ip address {{ New_Mgmt2 }}/25
+#
+{% else -%}
+interface Management1
+  no ip address {{ Mgmt1 }}/24
+  ip address {{ New_Mgmt1 }}/25
+#
+{% endif -%}
+no ip route 10.0.0.0/8 {{ Gateway }}
+no ip route 172.16.0.0/12 {{ Gateway }}
+no ip route 192.168.0.0/16 {{ Gateway }}
+#
+ip route 10.0.0.0/8 {{ New_Gateway }}
+ip route 172.16.0.0/12 {{ New_Gateway }}
+ip route 192.168.0.0/16 {{ New_Gateway }}
+
+{% endif -%}
+
+{% if Product == 'SPARE-IX' -%}
+    {% if VIP != '' -%}
+interface Management0
+  no ip address {{ VIP }}/24
+  ip address {{ New_VIP }}/25
+#
+interface Management1/1
+  no ip address {{ Mgmt1 }}/24
+  ip address {{ New_Mgmt1 }}/25
+#
+{% else -%}
+interface Management1
+  no ip address {{ Mgmt1 }}/24
+  ip address {{ New_Mgmt1 }}/25
+#
+{% endif -%}
+no ip route 10.0.0.0/8 {{ Gateway }}
+no ip route 172.16.0.0/12 {{ Gateway }}
+no ip route 192.168.0.0/16 {{ Gateway }}
+#
+ip route 10.0.0.0/8 {{ New_Gateway }}
+ip route 172.16.0.0/12 {{ New_Gateway }}
+ip route 192.168.0.0/16 {{ New_Gateway }}
+
+{% endif -%}
+
+{% if Product == 'EC' -%}
+    {% if VIP != '' -%}
+replace pattern {{ VIP }}/24 with {{ New_VIP }}/25
+replace pattern {{ Mgmt1 }}/24 with {{ New_Mgmt1 }}/25
+replace pattern {{ Mgmt2 }}/24 with {{ New_Mgmt2 }}/25
+replace pattern {{ VIP }} with {{ New_VIP }}
+replace pattern {{ Gateway }} with {{ New_Gateway }}
+{% else -%}
+replace pattern {{ Mgmt1 }}/24 with {{ New_Mgmt1 }}/25
+replace pattern {{ Mgmt1 }} with {{ New_Mgmt1 }}
+replace pattern {{ Gateway }} with {{ New_Gateway }}
+{% endif -%}
+show | compare
+commit check
+commit synchronize
+
+{% endif -%}
+
+
+{% if Product == 'SPARE-EC' -%}
+    {% if VIP != '' -%}
+      {% if Mgmt2 != '' -%}
+replace pattern {{ VIP }}/24 with {{ New_VIP }}/25
+replace pattern {{ Mgmt1 }}/24 with {{ New_Mgmt1 }}/25
+replace pattern {{ Mgmt2 }}/24 with {{ New_Mgmt2 }}/25
+replace pattern {{ VIP }} with {{ New_VIP }}
+replace pattern {{ Gateway }} with {{ New_Gateway }}
+{% else  -%}
+replace pattern {{ VIP }}/24 with {{ New_Mgmt1 }}/25
+replace pattern {{ Mgmt1 }}/24 with {{ New_Mgmt1 }}/25
+replace pattern {{ VIP }} with {{ New_VIP }}
+replace pattern {{ Gateway }} with {{ New_Gateway }}
+{% endif -%}
+{% else  -%}
+replace pattern {{ Mgmt1 }}/24 with {{ New_Mgmt1 }}/25
+replace pattern {{ Mgmt1 }} with {{ New_Mgmt1 }}
+replace pattern {{ Gateway }} with {{ New_Gateway }}
+{% endif -%}
+show | compare
+commit check
+commit synchronize
+
+{% endif -%}
