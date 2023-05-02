@@ -1,0 +1,23 @@
+#To use this code, create a text file named domain_names.txt and put one domain name per line. 
+#Then, save the above code to a file with a .py extension (e.g. dnsresolution.py) and run it with the command python3 dnsresolution.py. 
+#The script will read the domain names from the domain_names.txt file, perform DNS resolution on each one, and display the results. 
+#Note that this implementation uses os.popen() to run the nslookup command and capture its output.
+
+import os
+
+# Open the text file containing domain names
+with open('domain_names.txt', 'r') as f:
+    domain_names = f.readlines()
+
+# Loop through the domain names and perform DNS resolution on each one
+for domain in domain_names:
+    domain = domain.strip() # Remove any newline characters
+    nslookup_command = f"nslookup {domain}"
+    nslookup_output = os.popen(nslookup_command).read()
+
+    # Extract the IP address from the nslookup output
+    ip_index = nslookup_output.find('Address: ') + len('Address: ')
+    ip = nslookup_output[ip_index:].split()[0]
+
+    # Display the domain name and IP address
+    print(f"Domain name: {domain} - IP address: {ip}")
