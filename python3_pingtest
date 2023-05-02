@@ -1,0 +1,24 @@
+#To use this code, create a text file named ip_addresses.txt and put one IP address per line. 
+#Then, save the above code to a file with a .py extension (e.g. pingtest.py) and run it with the command python3 pingtest.py. 
+#The script will read the IP addresses from the ip_addresses.txt file, perform a ping test on each one, and display the results.
+
+import subprocess
+
+# Open the text file containing IP addresses
+with open('ip_addresses.txt', 'r') as f:
+    ip_addresses = f.readlines()
+
+# Loop through the IP addresses and perform a ping test on each one
+for ip in ip_addresses:
+    ip = ip.strip() # Remove any newline characters
+    ping_process = subprocess.Popen(['ping', '-c', '3', ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    ping_output, ping_error = ping_process.communicate()
+
+    # Check the exit code to determine if the ping test was successful
+    if ping_process.returncode == 0:
+        status = 'UP'
+    else:
+        status = 'DOWN'
+
+    # Display the IP address and status
+    print(f"IP address: {ip} - Status: {status}")
