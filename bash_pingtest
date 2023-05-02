@@ -1,0 +1,19 @@
+#To use this script, simply save it to a file with a .sh extension (e.g. pingtest.sh), 
+#make it executable with the command chmod +x pingtest.sh, and then run it with the command ./pingtest.sh. 
+#The script will prompt you to enter an IP address to ping, and then display the results of the ping test.
+#!/bin/bash
+
+# Prompt user for IP address input
+read -p "Enter IP address to ping: " ip_address
+
+# Perform ping test
+ping_result=$(ping -c 3 $ip_address)
+
+# Extract IP address and status from ping result
+ip=$(echo "$ping_result" | awk '/PING/{print $3}')
+status=$(echo "$ping_result" | awk '/packets transmitted/{print $2}')
+
+# Display results
+echo "IP address: $ip"
+echo "Status: $status"
+
