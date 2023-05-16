@@ -1,0 +1,18 @@
+#This script reads each line from the input file specified by the input_file variable and stores it in the ip_address variable. 
+#It then uses the nslookup command to perform an nslookup for the current IP address and extracts the hostname from the output using the awk command.
+#The awk command searches for the string "name =" in the output of the nslookup command and prints the last field (i.e., the hostname) from the line that contains this string.
+#Finally, the script prints the IP address and hostname result, separated by a tab character (\t), using the echo command. The -e option tells echo to interpret escape sequences such as \t.
+
+#!/bin/bash
+
+# Set the path to the input file
+input_file="/path/to/your/input/file"
+
+# Loop through each line in the input file
+while read -r ip_address; do
+    # Perform an nslookup for the current IP address
+    ns_result=$(nslookup "$ip_address" | awk '/name =/{print $NF}')
+
+    # Print the IP address and hostname result, separated by a tab character
+    echo -e "$ip_address\t$ns_result"
+done < "$input_file"
